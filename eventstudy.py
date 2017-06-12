@@ -72,7 +72,7 @@ class EventStudy:
         with open(self.BackupFileName,'wb') as f_handle: # create a backup txt file that contains the iterations for each AR's of each event
             #Loop through each event in the EventList
             for i in tqdm(range(self.IterStart, self.IterEnd)):
-                event_date = self.get_event_date(pd.to_datetime(self.Events.Date[i]))
+                event_date = self.get_event_date(pd.to_datetime(self.Events.index[i]))
                 start = self.__BusinessDays[self.__BusinessDays.index(event_date)-(self.BurnIn+self.Period[0]+1)]
                 end = self.__BusinessDays[self.__BusinessDays.index(event_date)+self.Period[1]]
                 
@@ -109,7 +109,8 @@ class EventStudy:
 #Example Usage:
 
 #Fetch list of positive/negative/neutral news events
-EventsDF = pd.read_table('positive_news_events.txt')
+EventsDF = pd.read_table('positive_news_events.txt',index_col=0)
+EventsDF.index = pd.to_datetime(EventsDF.index)
 
 #Fetch apropriate historical constituent prices:
 HistoricalConstituentReturns = pd.read_csv('sp500_hist_mod_returns_v2.csv',index_col=0)
@@ -124,3 +125,28 @@ FamaFrenchFactors.index = pd.to_datetime(FamaFrenchFactors.index,format='%Y%m%d'
 ES = EventStudy(EventsDF,np.array([60,60]),100,FamaFrenchFactors, HistoricalConstituentReturns, 'beckup_d.out',0,10000)
 ES.ConductStudy()
 ES.plot()
+
+#Note: Input Data Frames should be in these forms:
+#How the EventsDF should look like:
+           Ticker
+2005-01-03    ABT
+2005-01-03    ACN
+2005-01-03   ADBE
+2005-01-03    AFL
+2005-01-03    ALL
+
+#How the FamaFrenchFactors DF should look like:
+            Mkt_RF     SMB     HML     RMW     CMA       RF
+1999-01-04 -0.0019  0.0016  0.0044 -0.0025 -0.0045  0.00019
+1999-01-05  0.0110 -0.0091  0.0012 -0.0033 -0.0038  0.00019
+1999-01-06  0.0210 -0.0075 -0.0040 -0.0055 -0.0113  0.00019
+1999-01-07 -0.0007  0.0038 -0.0023 -0.0049 -0.0090  0.00019
+1999-01-08  0.0045  0.0016  0.0038 -0.0077 -0.0040  0.00019
+
+#How the HistoricalConstituentReturns DF should look like:
+                 AES      FAST        ED      EQIX    ...         EXPE  
+2017-04-24  0.018285 -0.007241  0.003912  0.005435    ...     0.016234   
+2017-04-25  0.002585  0.006803  0.000000  0.006218    ...     0.009571   
+2017-04-26 -0.014738  0.001967 -0.003280  0.001917    ...     0.002360   
+2017-04-27 -0.014072 -0.009431  0.005544  0.008824    ...     0.003309   
+2017-04-28  0.001770 -0.015546 -0.003777  0.016316    ...    -0.018376  
