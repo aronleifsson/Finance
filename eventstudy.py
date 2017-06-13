@@ -126,8 +126,11 @@ ES = EventStudy(EventsDF,np.array([60,60]),100,FamaFrenchFactors, HistoricalCons
 ES.ConductStudy()
 ES.plot()
 ES.Period = np.array([120,120]) #increase the observation period
-ES.ConductStudy
+ES.ConductStudy()
 ES.plot()
+#ES.Events = EventsDF.loc[start:end] #redefine the list of events, shorten/lengthn the interval etc.
+#ES.ConductStudy()
+#ES,plot() #...and so on
 
 #Note: Input Data Frames should be in these forms:
 #How the EventsDF should look like:
