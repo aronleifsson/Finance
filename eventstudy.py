@@ -54,14 +54,15 @@ class EventStudy:
     def get_event_date(self,day): 
     #Definition: Find closest trading day after given event
     
-    #Day:        Day of the event being analysed
+    #Day:        Day of the event being analysed of type Timestamp
     #(Note:      Be aware of the date format. We assume yyyy-mm-dd
     #            Also, be aware of the closing trading hour of the corresponding closing date)
-    
-        if day in self.__BusinessDays: return day
+        
+        if day.replace(hour=0, minute=0, second=0) in self.__BusinessDays and day.hour < 16: #assuming the stock exchange closes at 16:00 
+            return day.replace(hour=0, minute=0, second=0) #we use .replace since BusinessDays is of form timestamp yyyy-mm-dd hh:mm:ss where hh=mm=ss=0
         else: 
             for i in range(1,30):
-                next_day = day+pd.to_timedelta(i, unit="D")
+                next_day = day.replace(hour=0, minute=0, second=0)+pd.to_timedelta(i, unit="D")
                 if next_day in self.__BusinessDays: return next_day
     
     def ConductStudy(self):
@@ -72,7 +73,7 @@ class EventStudy:
         with open(self.BackupFileName,'wb') as f_handle: # create a backup txt file that contains the iterations for each AR's of each event
             #Loop through each event in the EventList
             for i in tqdm(range(self.IterStart, self.IterEnd)):
-                event_date = self.get_event_date(pd.to_datetime(self.Events.index[i]))
+                event_date = self.get_event_date(self.Events.index[i])
                 start = self.__BusinessDays[self.__BusinessDays.index(event_date)-(self.BurnIn+self.Period[0]+1)]
                 end = self.__BusinessDays[self.__BusinessDays.index(event_date)+self.Period[1]]
                 
@@ -87,8 +88,7 @@ class EventStudy:
                 # Perform matrix operations to calculate the Expected return
                 # Note: I need to add 1 at the end of lm.param to account for the RF column in FFF 
                 #       when performing the matrix & vector multiplication
-                #ExpectedReturn = FamaFrench.iloc[self.BurnIn+1:].dot(lm.params.iloc[1:].append(pd.Series([1],index=['RF'])))+lm.params[0]
-                ExpectedReturn = FamaFrench['Mkt_RF'].iloc[self.BurnIn+1:]*lm.params[1]+FamaFrench['SMB'].iloc[self.BurnIn+1:]*lm.params[2]+FamaFrench['HML'].iloc[self.BurnIn+1:]*lm.params[3]+FamaFrench['RMW'].iloc[self.BurnIn+1:]*lm.params[4]+FamaFrench['CMA'].iloc[self.BurnIn+1:]*lm.params[5]+lm.params[0] + FamaFrench['RF'].iloc[self.BurnIn+1:]
+                ExpectedReturn = FamaFrench.iloc[self.BurnIn+1:].dot(lm.params.iloc[1:].append(pd.Series([1],index=['RF'])))+lm.params[0]
                 ExcessReturn = ConstituentReturn[self.Events.Ticker[i]].iloc[self.BurnIn+1:]-ExpectedReturn
                 
                 self.__AR = np.vstack((self.__AR,ExcessReturn))
@@ -109,10 +109,10 @@ class EventStudy:
 #Example Usage:
 
 #Fetch list of positive/negative/neutral news events
-EventsDF = pd.read_table('positive_news_events.txt',index_col=0)
-EventsDF.index = pd.to_datetime(EventsDF.index)
+from sql_queries import get_events
+EventsDF = get_events(-1,2005,2017)
 
-#Fetch apropriate historical constituent prices:
+#Fetch apropriate historical constituent prices (nevermind the manipulations that I'm doing here, It is just easier to prepare the csv in such a way that it can be read directly):
 HistoricalConstituentReturns = pd.read_csv('sp500_hist_mod_returns_v2.csv',index_col=0)
 HistoricalConstituentReturns = HistoricalConstituentReturns.transpose()
 HistoricalConstituentReturns.index = pd.to_datetime(HistoricalConstituentReturns.index)
@@ -122,18 +122,22 @@ FamaFrenchFactors = pd.read_csv('F-F_Research_Data_5_Factors_2x3_daily.csv',inde
 FamaFrenchFactors.index = pd.to_datetime(FamaFrenchFactors.index,format='%Y%m%d')
 
 #Run the program
-ES = EventStudy(EventsDF,np.array([60,60]),100,FamaFrenchFactors, HistoricalConstituentReturns, 'beckup_d.out',0,10000)
+ES = EventStudy(EventsDF,np.array([60,60]),100,FamaFrenchFactors, HistoricalConstituentReturns, 'backup_d.out',0,10000)
 ES.ConductStudy()
+ES.plot()
+ES.Period = np.array([120,120]) #increase the observation period
+ES.ConductStudy
 ES.plot()
 
 #Note: Input Data Frames should be in these forms:
 #How the EventsDF should look like:
-           Ticker
-2005-01-03    ABT
-2005-01-03    ACN
-2005-01-03   ADBE
-2005-01-03    AFL
-2005-01-03    ALL
+                    Ticker
+2005-01-03 13:10:04    GLW
+2005-01-03 14:28:05   ADBE
+2005-01-03 18:29:07    CME
+2005-01-03 20:40:11    JPM
+2005-01-03 20:40:11    PFE
+2005-01-03 20:40:11    WDC
 
 #How the FamaFrenchFactors DF should look like:
             Mkt_RF     SMB     HML     RMW     CMA       RF
