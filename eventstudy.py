@@ -1,6 +1,8 @@
 '''
 @author: Aron Leifsson
 '''
+#Description/Motivation: https://www.princeton.edu/~markus/teaching/Eco467/04Lecture/04Event%20Study%20Description.pdf
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
